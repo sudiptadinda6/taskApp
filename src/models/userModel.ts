@@ -4,10 +4,19 @@ import { userschema } from "../databaseShema/shemauser";
 
 //INTERFACE FOR DATABASE
 
+enum TaskStatus {
+    DONE='done',
+    IN_PROGRESS='in-progress',
+    CANCELLED='cancelled',
+    CREATED ='created',
+    DELETED ='deleted',
+}
+
+
 interface User {
     name: string,
     description: string,
-    status:string,
+    status:TaskStatus,
     createdAt:any,
     updatedAt:any,
 
@@ -19,4 +28,4 @@ interface User {
 // @ts-ignore
 const userDataTodoApp =  model("userdatatodos", userschema)
 
-export { userDataTodoApp, User}
+export { userDataTodoApp, User,TaskStatus}
