@@ -7,7 +7,8 @@ import {
     taskUpdated,
     upload,
     filedatasend,
-    getDetaileActive
+    getDetaileActive,
+    dataCreatedindivual
      } from "../controller/users"
 
 export const router = Router()
@@ -25,4 +26,6 @@ router.delete('/tasks/:id', deletedtask)
 router.post('/csvfileupload', upload, filedatasend)
 
 router.get('/activetasks', getDetaileActive)
+
+router.post('/taskcreate',dataCreatedindivual)
 

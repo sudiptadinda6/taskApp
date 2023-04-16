@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { userDataTodoApp } from '../models/userModel';
+import { TaskStatus, userDataTodoApp } from '../models/userModel';
 import multer from 'MULTER';
 import path from 'path';
 import { parse } from 'csv';
@@ -9,10 +9,11 @@ import { tmpdir } from 'os';
 
 //DETAILES CHEACK ALL
 
-export const getDetailes = async (req: Request, res: Response):Promise<void> => {
+export const getDetailes = async (req: Request, res: Response): Promise<void> => {
+
     try {
-        let myDetalies = await userDataTodoApp.find()
-        res.send(myDetalies)
+        const myDetalies = await userDataTodoApp.find()
+        res.status(200).send(myDetalies)
     } catch (error: any) {
         res.send(error)
     }
@@ -20,10 +21,11 @@ export const getDetailes = async (req: Request, res: Response):Promise<void> => 
 
 //DETAILES ACTIVE TASK CHEACK ALL
 
-export const getDetaileActive = async (req: Request, res: Response):Promise<void> => {
+export const getDetaileActive = async (req: Request, res: Response): Promise<void> => {
+    console.log('active task call api')
     try {
-        let myDetalies = await userDataTodoApp.find({status:{$ne:'deleted'}})
-        
+        const myDetalies = await userDataTodoApp.find({ status: { $ne: TaskStatus.DELETED } })
+
         res.send(myDetalies)
     } catch (error: any) {
         res.send(error)
@@ -32,7 +34,8 @@ export const getDetaileActive = async (req: Request, res: Response):Promise<void
 
 //DETAILES CHEACK WITH ID
 
-export const getDataindividual = async (req: Request, res: Response):Promise<void> => {
+export const getDataindividual = async (req: Request, res: Response): Promise<void> => {
+    console.log(`indivisual api call`)
     try {
         const id: string = req.params.id
         let user
@@ -42,8 +45,8 @@ export const getDataindividual = async (req: Request, res: Response):Promise<voi
             res.status(404).send(`task not found`)
             return
         }
-        if (user.status === "deleted") {
-            res.status(404).send(`requsted task has  allready deleted`)
+        if (user.status === TaskStatus.DELETED) {
+            res.status(404).send(`requsted task has  allready delete`)
             return
 
         }
@@ -55,11 +58,16 @@ export const getDataindividual = async (req: Request, res: Response):Promise<voi
 
 //CREATED DETAILES TASKS 
 
-export const dataCreated = async (req: Request, res: Response):Promise<void> => {
+export const dataCreated = async (req: Request, res: Response): Promise<void> => {
     try {
-        let result_id = []
-        let taskFind = req.body.task
-        for (let userValue of taskFind) {
+        const result_id = []
+        const taskFind = req.body.task
+        for (const userValue of taskFind) {
+            const user = await userDataTodoApp.find({ name: { $eq: userValue.name } })
+            if (user.length) {
+                res.send(`task name allready praent`)
+                return
+            }
             const userimageSaveDb = new userDataTodoApp({
                 name: userValue.name,
                 description: userValue.description,
@@ -74,21 +82,46 @@ export const dataCreated = async (req: Request, res: Response):Promise<void> => 
     }
 }
 
+export const dataCreatedindivual = async (req: Request, res: Response): Promise<void> => {
+    console.log('api call create')
+    try {
+        const name = req.body.name
+        const description = req.body.description
+        const status = TaskStatus.CREATED
+        const user = await userDataTodoApp.find({ $and: [{ name: { $eq: name } }, { status: { $ne: TaskStatus.DELETED } }] })
+        if (user.length) {
+            res.status(409).send({ message: "****Task Name Allready Present" })
+            return
+        }
+        const userimageSaveDb = new userDataTodoApp({
+            name: name,
+            description: description,
+            status: status,
+
+        })
+        await userimageSaveDb.save()
+
+        res.status(201).send({ massage: " ***** Task Successfully Create !!! " })
+    } catch (error: any) {
+        res.status(500).send(error.massege)
+    }
+}
 //TASK UPDATE
 
-export const taskUpdated = async (req: Request, res: Response):Promise<void> => {
+export const taskUpdated = async (req: Request, res: Response): Promise<void> => {
+    console.log(`update api call`)
     try {
         const id: string = req.params.id
         let user
         try {
             user = await userDataTodoApp.findOne({ _id: id })
         } catch (error) {
-            res.status(404).send(`task not found`)
+            res.status(404).send({ massage: "****Task not found !!!!" })
             return
         }
-        if (user.status === "deleted") {
-            res.status(404).send(`requsted task has allready deleted`)
-            
+        if (user.status === TaskStatus.DELETED) {
+            res.status(404).send({ massage: "*****Requsted Task has Allready Delete" })
+
         }
         if (req.body.name) {
             user.name = req.body.name
@@ -101,7 +134,7 @@ export const taskUpdated = async (req: Request, res: Response):Promise<void> => 
 
         }
         await user.save()
-        res.status(201).send(user)
+        res.status(201).json({ massage: " ***** Task Successfully Update !!! " })
     } catch (error: any) {
         res.status(500).send(error.massage)
     }
@@ -109,21 +142,22 @@ export const taskUpdated = async (req: Request, res: Response):Promise<void> => 
 
 //TASK DEETE API 
 
-export const deletedtask = async (req: Request, res: Response):Promise<void> => {
+export const deletedtask = async (req: Request, res: Response): Promise<void> => {
+    console.log('deleted call api')
     try {
         const id: string = req.params.id
         let user
         try {
             user = await userDataTodoApp.findOne({ _id: id })
         } catch (error) {
-            res.status(404).send(`task not found`)
+            res.status(404).send({ massage: " ***** Task Not Found !!! " })
             return
         }
         if (user) {
-            user.status = "deleted",
-            user.save()
+            user.status = TaskStatus.DELETED,
+                user.save()
         }
-        res.status(201).send(`Task delete done `)
+        res.status(201).send({ massage: " ***** Task Successfully Delete !!! " })
     } catch (error: any) {
         res.status(500).send(error.massage)
     }
@@ -135,24 +169,25 @@ export const deletedtask = async (req: Request, res: Response):Promise<void> => 
 const storage = multer.diskStorage({
     destination: tmpdir(),
     filename: (req, file, cb) => {
-    cb(null, file.fieldname + "_" + Date.now() + path.extname(file.originalname))
+        cb(null, file.fieldname + "_" + Date.now() + path.extname(file.originalname))
     }
 })
 
-export const upload = multer({ storage: storage }).single('cs_files')
+export const upload = multer({ storage: storage }).single('file')
 
 
 
 //FILE READ AND DONE WORK IN DATABASE
 
-export const filedatasend = async (req: Request, res: Response):Promise<void> => {
+export const filedatasend = async (req: Request, res: Response): Promise<void> => {
+    console.log(`file upload api call `)
 
     try {
-        const  namefile = req.file.filename
+        const namefile = req.file.filename
         const filePath: string = tmpdir() + `/${namefile}`
-        let result_id: any = []
+        const result_id: any = []
         const parser = parse({ columns: false }, async (err, records) => {
-            for (let userValue of records) {
+            for (const userValue of records) {
                 const userimageSaveDb = new userDataTodoApp({
                     name: userValue[0],
                     description: userValue[1],
@@ -161,10 +196,10 @@ export const filedatasend = async (req: Request, res: Response):Promise<void> =>
                 result_id.push(userimageSaveDb._id)
                 await userimageSaveDb.save()
             }
-            res.status(201).send(result_id)
+            res.status(201).send({ massage: "Csv_Task Files Successfully Save In Data Base !!! " })
         })
-        fs.createReadStream(filePath).pipe(parser)
-        fs.unlinkSync(filePath)
+        fs.createReadStream(filePath).pipe(parser).on('end', () => fs.unlinkSync(filePath)).on('error', () => fs.unlinkSync(filePath))
+
     } catch (error: any) {
         res.send(error.massage)
     }
